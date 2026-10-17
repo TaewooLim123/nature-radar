@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#1f4a33" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#10291c" media="(prefers-color-scheme: dark)">
+  <!-- The colour theme picked on the Account page, applied before the page draws (no flash). -->
+  <meta name="description" content="See which plants and animals people spotted near you this week, ranked by how rare they are locally. Snap a photo and an offline AI suggests what it is.">
+  <title>Nature Radar</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <!-- Pixel font for the dex (falls back to a monospace font offline). -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&display=swap">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Nature Radar">
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-view="nearby">
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="top">
+    <div class="top-inner">
+      <div class="brand-row">
+        <div class="brand">
+          <svg viewBox="0 0 32 32" width="30" height="30" aria-hidden="true">
+            <circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" stroke-width="2" opacity=".35"/>
+            <circle cx="16" cy="16" r="8.5" fill="none" stroke="currentColor" stroke-width="2" opacity=".65"/>
+            <circle cx="16" cy="16" r="2.5" fill="currentColor"/>
+            <circle cx="23" cy="9" r="3" fill="var(--sun)"/>
+          </svg>
+          <span>Nature Radar</span>
+        </div>
+        <div class="top-actions">
+          <button class="place-pill" type="button" data-action="open-sheet" aria-haspopup="dialog">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5Z"/></svg>
+            <span id="placeLabel">Locating…</span>
+          </button>
+          <button class="account-btn" id="accountBtn" type="button" data-action="account" aria-label="Your account and achievements">
+            <span class="avatar" aria-hidden="true">🦉</span>
+            <span class="account-dot" id="accountDot" hidden></span>
+          </button>
+        </div>
+      </div>
+      <div class="tabs" role="tablist" aria-label="Views">
+        <button type="button" role="tab" id="tab-nearby" aria-controls="nearbyView" aria-selected="true" data-action="tab" data-tab="nearby">Nearby</button>
+        <button type="button" role="tab" id="tab-community" aria-controls="communityView" aria-selected="false" tabindex="-1" data-action="tab" data-tab="community">Community</button>
+        <button type="button" role="tab" id="tab-collection" aria-controls="collectionView" aria-selected="false" tabindex="-1" data-action="tab" data-tab="collection">Collection</button>
+      </div>
+      <p class="stat" id="stat" aria-live="polite"></p>
+    </div>
+  </header>
+
+  <div class="net-banner" id="netBanner" role="status" hidden>
+    <strong>You’re offline.</strong> Your sightings, saved data and the offline AI still work. Everything else updates when you reconnect.
+  </div>
+
+  <main id="main">
+    <!-- Collection tab's two parts: the Dex (species) and the Journal (every sighting) -->
+    <nav class="subnav" aria-label="Collection">
+      <button type="button" class="subnav-btn" data-action="tab" data-tab="collection" id="subDex">📖 Dex</button>
+      <button type="button" class="subnav-btn" data-action="tab" data-tab="lifelist" id="subLife">🗺️ Life list</button>
+      <button type="button" class="subnav-btn" data-action="tab" data-tab="mine" id="subJournal">📋 Journal<span class="tab-count" id="mineCount"></span></button>
+    </nav>
+
+    <!-- Nearby this week -->
+    <div class="layout" id="nearbyView" role="tabpanel" aria-labelledby="tab-nearby">
+      <section class="map-col" aria-label="Map of this week's sightings">
+        <div class="map-card">
+          <div id="map"></div>
+          <div class="map-banner" id="pickBanner" hidden>
+            <span>Tap the map to scan that spot</span>
+            <button type="button" class="btn btn-small" data-action="cancel-pick">Cancel</button>
+          </div>
+          <div class="map-loading" id="mapLoading" hidden>
+            <span class="spinner" aria-hidden="true"></span>
+            <span id="mapLoadingText">Loading sightings…</span>
+          </div>
+        </div>
+        <ul class="legend" aria-label="Marker colors">
+          <li><i class="dot t-common"></i>Common</li>
+          <li><i class="dot t-uncommon"></i>Uncommon</li>
+          <li><i class="dot t-rare"></i>Rare</li>
+          <li><i class="dot t-veryrare"></i>Very rare</li>
+          <li><i class="dot t-unranked"></i>Unranked</li>
+        </ul>
+      </section>
+
+      <section class="list-col" aria-labelledby="listTitle">
+        <div class="filters" id="nearbyFilters"></div>
+        <div id="seasonCard"></div>
+        <details class="info-head list-head">
+          <summary><h2 id="listTitle">Rarest this week</h2><span class="info-i" aria-label="More about this">i</span></summary>
+          <p class="list-sub">Everything spotted in this circle in the last 7 days, rarest first: ranked by how seldom each species has ever been recorded here. Tap a species to see it on the map.</p>
+        </details>
+        <div id="nearbyNotice"></div>
+        <div id="status" aria-live="polite"></div>
+        <ol class="species-list" id="list"></ol>
+
+        <footer class="credits">
+          Sightings &amp; photos: <a href="https://www.inaturalist.org" target="_blank" rel="noopener">iNaturalist</a> observers ·
+          Map © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>
+        </footer>
+      </section>
+    </div>
+
+    <!-- My sightings -->
+    <!-- Collection tab, part 2: the Journal (every sighting, including unidentified ones) -->
+    <section class="page" id="mineView" role="tabpanel" aria-labelledby="tab-collection" hidden>
+      <details class="info-head list-head">
+        <summary><h2>Sighting journal</h2><span class="info-i" aria-label="More about this">i</span></summary>
+        <p class="list-sub">Every photo you’ve saved, each rated by how rarely that species has been recorded on iNaturalist within 3 km of where you took it. Photos stay on this device unless you share them; back them up from your account page (tap your avatar).</p>
+      </details>
+      <div class="filters" id="mineFilters"></div>
+      <div class="sort-row" id="mineSort" role="toolbar" aria-label="Sort sightings"></div>
+      <div id="mineStatus" aria-live="polite"></div>
+      <ol class="species-list" id="mineList"></ol>
+    </section>
+
+    <!-- Collection (Pokédex-style) -->
+    <section class="page" id="collectionView" role="tabpanel" aria-labelledby="tab-collection" hidden></section>
+
+    <!-- Collection tab, part 2: Life list (every species you've ever recorded, on a map + by date) -->
+    <section class="page" id="lifelistView" role="tabpanel" aria-labelledby="tab-collection" hidden>
+      <div id="lifeHead"></div>
+      <div class="life-map-card" id="lifeMapCard" hidden><div id="lifeMap"></div></div>
+      <div id="lifeBody"></div>
+    </section>
+
+    <!-- Community -->
+    <section class="page" id="communityView" role="tabpanel" aria-labelledby="tab-community" hidden>
+      <div class="community-mode" id="communityMode"></div>
+      <div class="filters" id="communityFilters"></div>
+      <div id="communityStatus" aria-live="polite"></div>
+      <div class="feed" id="feed"></div>
+    </section>
+
+    <!-- Account (opened from the avatar button) -->
+    <section class="page account" id="accountView" aria-label="Your account" hidden></section>
+  </main>
+
+  <nav class="dock" aria-label="Controls">
+    <fieldset class="seg">
+      <legend class="sr-only">Search radius</legend>
+      <label><input type="radio" name="radius" value="1"><span>1 km</span></label>
+      <label><input type="radio" name="radius" value="3" checked><span>3 km</span></label>
+      <label><input type="radio" name="radius" value="5"><span>5 km</span></label>
+    </fieldset>
+    <button class="dock-btn dock-place" type="button" data-action="open-sheet" aria-haspopup="dialog">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5Z"/></svg>
+      <span>Place</span>
+    </button>
+    <button class="dock-btn dock-cam" type="button" data-action="camera" aria-label="Take a photo of wildlife">
+      <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill="currentColor" d="M9 3 7.2 5H4a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-3.2L15 3H9Zm3 5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Zm0 2a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Z"/></svg>
+      <span class="cam-short">Snap</span><span class="cam-long">Add a sighting</span>
+    </button>
+    <button class="dock-btn dock-share" type="button" data-action="c-pick">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M18 16a3 3 0 0 0-2.4 1.2l-6.7-3.4a3 3 0 0 0 0-1.6l6.7-3.4A3 3 0 1 0 15 7a3 3 0 0 0 .1.8L8.4 11.2a3 3 0 1 0 0 3.6l6.7 3.4a3 3 0 1 0 2.9-2.2Z"/></svg>
+      <span>Share a sighting</span>
+    </button>
+  </nav>
+
+  <input type="file" id="photoInput" accept="image/*" capture="environment" hidden>
+  <input type="file" id="importInput" accept="application/json,.json" hidden>
+  <dialog class="dlg" id="sightingDialog" aria-labelledby="dlgTitle"></dialog>
+  <dialog class="dlg" id="communityDialog" aria-labelledby="cdlgTitle"></dialog>
+  <dialog class="dlg" id="dexDialog" aria-labelledby="dexTitle"></dialog>
+  <div class="cele" id="celebrate" hidden></div>
+  <div class="toast" id="toast" role="status" hidden></div>
+
+  <div class="sheet-backdrop" id="sheetBackdrop" data-action="close-sheet" hidden></div>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" hidden>
+    <div class="sheet-grip" aria-hidden="true"></div>
+    <h2 id="sheetTitle">Where should we scan?</h2>
+    <p class="sheet-note" id="sheetNote" hidden></p>
+    <button class="option" type="button" data-action="locate">
+      <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 2v3m0 14v3M2 12h3m14 0h3"/><circle cx="12" cy="12" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/></svg>
+      <span><strong>Use my location</strong><small>Your browser will ask for permission</small></span>
+    </button>
+    <button class="option" type="button" data-action="deanza">
+      <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill="currentColor" d="M12 3 1.5 8.5 12 14l8.5-4.45V16H22V8.5L12 3Zm-6 9.6v3.9C6 18.4 8.7 20 12 20s6-1.6 6-3.5v-3.9l-6 3.15-6-3.15Z"/></svg>
+      <span><strong>Use De Anza College</strong><small>Cupertino, California</small></span>
+    </button>
+    <button class="option" type="button" data-action="pick">
+      <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="m3 6 6-2.5 6 2.5 6-2.5v14.5L15 20.5l-6-2.5-6 2.5V6Zm6-2.5v14.5m6-12v14.5"/></svg>
+      <span><strong>Pick a spot on the map</strong><small>Tap anywhere, or long-press the map any time</small></span>
+    </button>
+    <button class="btn btn-ghost sheet-close" type="button" data-action="close-sheet">Close</button>
+  </div>
+
+  <!-- Opened by double-clicking the file? Browsers block the app's code there; explain how to open it. -->
+  <script>
+    if (location.protocol === 'file:') {
+      document.body.innerHTML = '<div class="file-warning"><h1>Almost there!</h1><p>Nature Radar has to be opened from a web address, not by double-clicking the file.</p><p>Put it on GitHub Pages (see README.md), or run <code>python3 -m http.server 8000</code> in this folder and open <code>http://localhost:8000</code>.</p></div>';
+    }
+  </script>
+  <script src="vendor/leaflet/leaflet.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

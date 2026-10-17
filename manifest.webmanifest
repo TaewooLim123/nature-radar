@@ -1,0 +1,17 @@
+{
+  "name": "Nature Radar",
+  "short_name": "Nature Radar",
+  "description": "See which plants and animals were spotted near you this week, ranked by local rarity. Snap a photo and an offline AI suggests what it is.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f1e2cf",
+  "theme_color": "#1f4a33",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}
