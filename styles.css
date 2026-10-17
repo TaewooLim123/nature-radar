@@ -1,10 +1,10 @@
 /* Nature Radar — mobile-first styles */
 
 :root {
-  /* One palette for every screen: a sand page (60%), light-sage cards (30%), dark forest green for
+  /* One palette for every screen: a light terracotta page (60%), light-sage cards (30%), dark forest green for
      the header, tab bar, dock and primary buttons, and terracotta as the second accent (rarity
      highlights, badges, "NEW" labels). Every text/background pair here passes WCAG AA (4.5:1). */
-  --bg: #f1e2cf;            /* sand page */
+  --bg: #f2d4c2;            /* light terracotta page */
   --surface: #e3ecdb;       /* sage cards, dialogs, panels */
   --surface-2: #d5e2ca;     /* hover / nested sage */
   --field: #f8faf4;         /* text inputs: lighter than the cards */
@@ -15,7 +15,7 @@
   --accent-strong: #163826; /* pressed / hover */
   --accent-ink: #f3f6ef;
   --clay: #b8573a;          /* terracotta fills (white text on it) */
-  --clay-ink: #94401f;      /* terracotta text on sand / sage */
+  --clay-ink: #94401f;      /* terracotta text on the page / sage */
   --clay-on: #ffffff;       /* text on a terracotta fill */
   --header-bg: #1f4a33;
   --header-bg-strong: #163826;

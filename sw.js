@@ -3,7 +3,7 @@
    • AI model + TensorFlow.js: saved the first time they download, then served from the device.
    • Map tiles you've looked at: saved (up to 600), so the map still shows offline.
    The iNaturalist API and Supabase aren't handled here; the app has its own offline fallbacks. */
-const VERSION = 'v14'; // bump to clear old saved app files
+const VERSION = 'v15'; // bump to clear old saved app files
 const SHELL = `nr-shell-${VERSION}`;
 const AI = 'nr-ai-v2'; // v2: the MobileNet weights are one file now (were 55 shards)
 const TILES = 'nr-tiles-v1';
