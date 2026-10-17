@@ -122,7 +122,7 @@ export function render() {
     const extra = extras.filter(m => groupOf(m.taxon.iconic) === g.key).length;
     return { ...g, total: dexIn.length + extra, got: dexIn.filter(d => mine.has(d.id)).length + extra };
   }).filter(g => g.total || g.key === C.group);
-  // Trees cut across groups, so they get their own chip, first and highlighted.
+  // Trees cut across groups (oaks are plants, like poppies), so they get their own filter chip.
   if (dexTrees.length || treeExtra) groupStats.unshift({ key: 'trees', label: '🌳 Trees', total: dexTrees.length + treeExtra, got: dexTrees.filter(d => mine.has(d.id)).length + treeExtra });
 
   // Header: level + progress for what's shown (the whole local dex, or one group such as Trees).
@@ -130,7 +130,7 @@ export function render() {
   const scope = C.group === 'all' ? { label: 'Local dex', got, total } : groupStats.find(g => g.key === C.group) || { label: 'Local dex', got, total };
   const pct = scope.total ? Math.round((scope.got / scope.total) * 100) : 0;
   const scopeName = C.group === 'all' ? 'Local dex' : scope.label.replace(/^\S+ (?=Trees)/, '');
-  const head = `<div class="dex-head${C.group === 'trees' ? ' is-trees' : ''}">
+  const head = `<div class="dex-head">
       <div class="dex-ring" style="--pct:${pct}" role="img" aria-label="${scope.got} of ${scope.total} ${esc(scopeName)} collected">
         <strong>${scope.got}</strong><span>/ ${scope.total || '—'}</span>
       </div>
@@ -138,14 +138,11 @@ export function render() {
         ${infoHead(esc(scopeName), `${!total
           ? (loc ? 'Loading this place’s local dex…' : 'Choose a place on the Nearby tab to unlock its local dex: 151 species, starting with its 50 most-recorded trees.')
           : C.group === 'trees' ? `The ${scope.total} trees most recorded within ${model.radius} km of ${esc(loc.label)} (planted ones too). Snap a leaf, bark or the whole tree.`
-          : C.group === 'all' ? `${dexTrees.length ? `#001–${dexNo(dexTrees.length)} are the trees most recorded within ${model.radius} km of ${esc(loc.label)}, then the most-recorded wildlife and plants.` : `The species most often recorded within ${model.radius} km of ${esc(loc.label)}.`} Snap them all!`
+          : C.group === 'all' ? `The ${total} species most recorded within ${model.radius} km of ${esc(loc.label)}, ${dexTrees.length} of them trees (planted ones too). #001 is the most recorded. Snap them all!`
           : `${pct}% of this area’s ${esc(scope.label.toLowerCase())} collected.`}`)}
+        <p class="level-line" title="${lv.xp} XP · ${lv.toNext} XP to level ${lv.level + 1}"><span class="level-pill">Lv ${lv.level}</span><strong>${esc(lv.title)}</strong></p>
+        <div class="progress" role="progressbar" aria-label="XP to level ${lv.level + 1}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(lv.progress * 100)}"><span style="width:${Math.round(lv.progress * 100)}%"></span></div>
       </div>
-    </div>
-    <div class="level-bar" title="${lv.xp} XP">
-      <span class="level-pill">Lv ${lv.level}</span>
-      <div class="level-text"><strong>${esc(lv.title)}</strong><span>${lv.xp} XP · ${lv.toNext} to level ${lv.level + 1}</span>
-        <div class="progress"><span style="width:${Math.round(lv.progress * 100)}%"></span></div></div>
     </div>`;
 
   // Targets: species you still need that someone spotted nearby this week.
@@ -155,7 +152,7 @@ export function render() {
       ${infoHead('🎯 Targets nearby', 'Species missing from your dex that someone spotted nearby this week. They’re out there!', { id: 'targetsTitle' })}
       <ul class="target-row">${targets.map(d => `<li><button type="button" class="target" data-action="x-hint" data-id="${d.id}">
         <span class="dex-photo">${d.photo ? `<img src="${esc(photoSize(d.photo, 'small'))}" alt="" loading="lazy" data-fallback=" ">` : ''}<span class="dex-q" aria-hidden="true">?</span></span>
-        <span class="target-no">${dexNo(d.no)}</span><span class="target-seen">${weekIds.get(d.id)}× this week</span>
+        <span class="target-no">${dexNo(d.no)}</span><span class="target-seen" title="Spotted ${weekIds.get(d.id)}× nearby this week">seen ${weekIds.get(d.id)}×</span>
       </button></li>`).join('')}</ul></section>` : '';
 
   const bar = (a, b) => `<span class="chip-bar" aria-hidden="true"><i style="width:${b ? Math.round((a / b) * 100) : 0}%"></i></span>`;
@@ -164,31 +161,20 @@ export function render() {
       ${groupStats.map(g => `<button type="button" class="chip g-${g.key}${g.key === 'trees' ? ' chip-trees' : ''}" data-action="x-group" data-value="${g.key}" aria-pressed="${C.group === g.key}">${g.label}<span class="chip-count">${g.got}/${g.total}</span>${bar(g.got, g.total)}</button>`).join('')}
     </div>
     <div class="chip-row chip-row-sub dex-chips" role="toolbar" aria-label="Show caught or missing">
-      ${[['all', 'Everything'], ['caught', '✓ Caught'], ['missing', '? Missing']].map(([k, label]) =>
+      ${[['all', 'All'], ['caught', 'Caught'], ['missing', 'Missing']].map(([k, label]) =>
         `<button type="button" class="chip chip-sub" data-action="x-status" data-value="${k}" aria-pressed="${C.status === k}">${label}</button>`).join('')}
     </div>`;
 
-  const cardsFor = list => list.filter(d => matchesGroup(d, d.tree) && matchesStatus(mine.has(d.id)))
-    .map(d => (mine.has(d.id) ? caughtCard(mine.get(d.id), d.no, d) : missingCard(d))).join('');
-  const featured = dex.filter(d => d.tree && d.no <= dexTrees.length);
-  let dexCards = '';
-  if (C.group === 'all' && featured.length) {
-    const treeCards = cardsFor(featured), restCards = cardsFor(dex.filter(d => !featured.includes(d)));
-    const fGot = featured.filter(d => mine.has(d.id)).length;
-    dexCards = `${treeCards ? `<h2 class="dex-sub dex-section"><span>🌳 Trees</span><small>#001–${dexNo(featured.length)} · ${fGot}/${featured.length}</small></h2><ol class="dex-grid">${treeCards}</ol>` : ''}
-      ${restCards ? `<h2 class="dex-sub dex-section"><span>Wildlife &amp; plants</span><small>${dexNo(featured.length + 1)}–${dexNo(dex.length)}</small></h2><ol class="dex-grid">${restCards}</ol>` : ''}`;
-  } else {
-    const cards = cardsFor(dex);
-    dexCards = cards ? `<ol class="dex-grid">${cards}</ol>` : '';
-  }
+  // One grid: the local dex in number order, then your finds from beyond it (marked ✦, newest first).
+  const dexCards = dex.filter(d => matchesGroup(d, d.tree) && matchesStatus(mine.has(d.id)))
+    .map(d => (mine.has(d.id) ? caughtCard(mine.get(d.id), d.no, d) : missingCard(d)));
   const beyond = C.status === 'missing' ? [] : extras.filter(m => matchesGroup(m.taxon, isTree(m.taxon)))
-    .sort((a, b) => b.first.createdAt.localeCompare(a.first.createdAt));
+    .sort((a, b) => b.first.createdAt.localeCompare(a.first.createdAt)).map(m => caughtCard(m, null));
+  const cards = [...dexCards, ...beyond].join('');
 
   view.innerHTML = `${head}${mine.size || total ? chips : ''}${targetsHtml}
     ${!mine.size ? `<p class="notice">📷 Tap <strong>Add a sighting</strong> to catch your first species.</p>` : ''}
-    ${dexCards || (total ? '<p class="cand-note">Nothing here with these filters.</p>' : '')}
-    ${beyond.length ? `<div class="dex-sub">${infoHead('✨ Beyond the local dex', 'Species you found that aren’t in this area’s dex: rarer finds, or ones from other places.')}</div>
-      <ol class="dex-grid">${beyond.map(m => caughtCard(m, null)).join('')}</ol>` : ''}`;
+    ${cards ? `<ol class="dex-grid">${cards}</ol>` : (total ? '<p class="cand-note">Nothing here with these filters.</p>' : '')}`;
 }
 
 const groupClass = t => `g-${isTree(t) ? 'trees' : groupOf(t.iconic)}`;
@@ -198,7 +184,7 @@ function caughtCard(m, no, d) {
   const shiny = isShiny(m.tier);
   return `<li><button type="button" class="dex-card is-got t-${m.tier} ${d?.tree ? 'g-trees' : groupClass(m.taxon)}${shiny ? ' is-shiny' : ''}" data-action="x-entry" data-id="${m.taxon.id}"
       aria-label="${no ? `Number ${no}, ` : ''}${esc(displayName(m.taxon))}, collected${shiny ? ', shiny' : ''}">
-    ${no ? `<span class="dex-no">${dexNo(no)}</span>` : '<span class="dex-no is-star">✨</span>'}
+    ${no ? `<span class="dex-no">${dexNo(no)}</span>` : '<span class="dex-no is-star" title="Beyond this area’s local dex">✦</span>'}
     ${shiny ? '<span class="shiny-tag" aria-hidden="true">✦</span>' : ''}
     <span class="dex-photo">${url ? `<img src="${url}" alt="" loading="lazy">` : '<span aria-hidden="true">📷</span>'}</span>
     <span class="dex-name">${esc(displayName(m.taxon))}</span>

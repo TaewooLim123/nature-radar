@@ -174,7 +174,6 @@ function render() {
   el.filters.innerHTML = filterBarHtml('community', items, C.filter);
 
   const notes = [];
-  if (!LIVE) notes.push('<details class="notice-fold"><summary><span><strong>Demo mode</strong> · sample posts</span></summary><p>Sample posts are made up, and posts you share stay on this device. To share for real, connect a free Supabase project (see README).</p></details>');
   if (C.staleAt) notes.push(`<strong>Offline.</strong> Showing posts saved ${esc(timeAgo(C.staleAt))}.`);
   const pending = C.mine.filter(p => p.status === 'pending' || p.status === 'failed');
   if (pending.length) notes.push(`${pending.length} ${pending.length === 1 ? 'post is' : 'posts are'} waiting to upload. <button type="button" class="link-btn" data-action="c-retry-outbox">Try now</button>`);
@@ -220,7 +219,7 @@ function topExplorers() {
     .sort((a, b) => b.score - a.score).slice(0, 5);
   if (!ranked.length) return '';
   return `<section class="leaderboard" aria-labelledby="lbTitle">
-    <h2 id="lbTitle">Top explorers this week <span class="tag">Sample</span></h2>
+    <h2 id="lbTitle">Top explorers this week</h2>
     <ol class="more-list" id="leaderboard">${ranked.map(({ u, posts, likes }, i) => `<li${i >= 3 ? ' class="is-extra"' : ''}><button type="button" class="lb-row" data-action="c-profile" data-user="${esc(u.key)}">
       <span class="lb-rank">${i + 1}</span>
       <span class="avatar" style="--av:${esc(u.color)}" aria-hidden="true">${esc(u.avatar)}</span>
@@ -240,14 +239,14 @@ function postCard(p) {
     : '<div class="post-photo post-photo-empty" aria-hidden="true">🌿</div>';
   const statusLine = p.status === 'pending' ? '<p class="post-pending">⏳ Waiting for a connection to post…</p>'
     : p.status === 'failed' ? `<p class="post-pending is-error">Couldn’t post: ${esc(p.lastError || 'unknown error')}</p>`
-    : p.status === 'local' ? '<p class="post-pending">Demo mode: only you can see this post.</p>' : '';
+    : '';
   return `<article class="post">
     <header class="post-head">
       ${p.author.key
         ? `<button type="button" class="avatar avatar-btn" style="--av:${esc(p.author.color)}" data-action="c-profile" data-user="${esc(p.author.key)}" aria-label="See ${esc(p.author.name)}’s profile">${esc(p.author.avatar)}</button>`
         : `<span class="avatar" style="--av:${esc(p.author.color)}" aria-hidden="true">${esc(p.author.avatar)}</span>`}
       <div class="post-who">
-        <p>${p.author.key ? `<button type="button" class="post-author" data-action="c-profile" data-user="${esc(p.author.key)}" aria-label="See ${esc(p.author.name)}’s profile">${esc(p.author.name)}</button>` : `<strong>${esc(p.author.name)}</strong>`}${p.sample ? '<span class="tag">Sample</span>' : ''}${p.mine ? '<span class="tag tag-you">You</span>' : ''}</p>
+        <p>${p.author.key ? `<button type="button" class="post-author" data-action="c-profile" data-user="${esc(p.author.key)}" aria-label="See ${esc(p.author.name)}’s profile">${esc(p.author.name)}</button>` : `<strong>${esc(p.author.name)}</strong>`}${p.mine ? '<span class="tag tag-you">You</span>' : ''}</p>
         <p class="post-meta">${esc(timeAgo(p.createdAt))}${p.place ? ` · 📍 ${esc(p.place)}` : ''}</p>
       </div>
       ${p.mine ? `<button type="button" class="btn btn-ghost btn-small post-delete" data-action="c-delete" data-id="${esc(p.id)}">Delete</button>` : ''}
@@ -382,7 +381,7 @@ function openProfile(key) {
     <div class="dlg-body profile">
       <div class="profile-top">
         <span class="avatar avatar-lg" style="--av:${esc(u.color)}" aria-hidden="true">${esc(u.avatar)}</span>
-        <div><p class="profile-name">${esc(u.name)} <span class="tag">Sample</span></p>
+        <div><p class="profile-name">${esc(u.name)}</p>
           <p class="muted">Level ${u.level} · exploring since ${esc(since)}</p></div>
       </div>
       <div class="profile-stats">
@@ -465,9 +464,7 @@ export function openShare(sightingId) {
       <textarea id="shareCaption" class="field field-area" maxlength="280" rows="3" placeholder="What was it doing? Where exactly?"></textarea>
       <label class="field-label" for="sharePlace">Place name <span class="optional">(optional)</span></label>
       <input id="sharePlace" class="field" maxlength="80" value="${esc(placeGuess)}" placeholder="e.g. Rancho San Antonio">
-      <p class="share-note">${LIVE
-        ? 'Your photo and post will be public. The location is rounded to about 1 km to protect the spot.'
-        : 'Demo mode: this post will only be visible on this device.'}</p>
+      ${LIVE ? '<p class="share-note">Your photo and post will be public. The location is rounded to about 1 km to protect the spot.</p>' : ''}
     </div>
     <div class="dlg-foot">
       <button type="button" class="btn btn-ghost" data-action="c-close">Cancel</button>

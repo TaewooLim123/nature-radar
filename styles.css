@@ -686,19 +686,11 @@ body[data-view="collection"] .page, body[data-view="mine"] .page, body[data-view
   background: var(--clay); color: var(--clay-on); font-size: .6875rem; font-weight: 800; line-height: 1.6; letter-spacing: .02em;
 }
 
-/* Level + XP */
-.level-bar {
-  display: flex; align-items: center; gap: 12px; margin: 10px 0 4px; padding: 10px 12px;
-  border-radius: 14px; background: var(--surface); border: 1px solid var(--border);
-}
+/* Level (in the Collection header) */
 .level-pill {
   flex: none; padding: 6px 10px; border-radius: 10px; background: var(--header-bg); color: var(--header-ink);
   font-weight: 900; font-size: .9rem; letter-spacing: .02em;
 }
-.level-text { flex: 1; min-width: 0; display: grid; gap: 2px; }
-.level-text strong { font-family: var(--font-serif); font-size: 1.05rem; line-height: 1.1; }
-.level-text > span { font-size: .75rem; color: var(--muted); }
-.level-text .progress span { background: linear-gradient(90deg, var(--accent), var(--sun)); }
 
 /* Targets nearby */
 .targets { margin: 16px 0 4px; }
@@ -1087,7 +1079,6 @@ html:has(dialog[open]) body { overflow: hidden; } /* the page behind doesn't scr
 .dex-chips .chip[aria-pressed="true"] { box-shadow: 2px 2px 0 var(--clay); }
 .dex-chips .chip-count { font-family: var(--pixel-font); font-size: .625rem; }
 
-#collectionView .level-bar { border-radius: 0; border: 3px solid var(--px-ink); box-shadow: 4px 4px 0 var(--px-ink); }
 #collectionView .level-pill { border-radius: 0; font-family: var(--pixel-font); font-weight: 400; }
 #collectionView .progress { height: 10px; border-radius: 0; border: 2px solid var(--px-ink); background: var(--surface); }
 #collectionView .progress span {
@@ -1139,8 +1130,6 @@ html:has(dialog[open]) body { overflow: hidden; } /* the page behind doesn't scr
 .dex-chips .chip-trees[aria-pressed="true"] { background: var(--g); border-color: var(--g); color: var(--accent-ink); }
 @media (prefers-color-scheme: dark) { .dex-chips .chip-trees[aria-pressed="true"] { color: #10140f; } }
 
-.dex-section { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin: 18px 0 10px; padding-bottom: 6px; border-bottom: 3px solid var(--px-ink); }
-.dex-section small { font-family: var(--pixel-font); font-size: .6875rem; color: var(--muted); }
 .entry-found { margin: 2px 0 10px; font-weight: 700; color: var(--accent); }
 
 /* ---------- "Top first + show more" lists, achievement tiers, leaderboard ---------- */
@@ -1199,3 +1188,20 @@ html:has(dialog[open]) body { overflow: hidden; } /* the page behind doesn't scr
 .ai-how { margin: 4px 0 2px; font-size: .8125rem; }
 .ai-how > summary { cursor: pointer; color: var(--muted); font-weight: 600; width: max-content; }
 .ai-how > p { margin: 4px 0 0; }
+
+/* Collection header: progress ring + title, level and XP bar in one compact block. */
+.dex-head { padding: 12px; border: 3px solid var(--px-ink); box-shadow: 4px 4px 0 var(--px-ink); background: var(--surface); }
+.dex-head-text { flex: 1; min-width: 0; display: grid; gap: 4px; }
+.dex-head .info-head { margin: 0; }
+.dex-head .info-head > summary { min-height: 32px; }
+.level-line { display: flex; align-items: center; gap: 8px; margin: 0; min-width: 0; }
+.level-line strong { font-family: var(--font-serif); font-size: 1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dex-head .level-pill { padding: 3px 7px; font-size: .75rem; }
+.dex-chips { margin-top: 12px; }
+/* Targets: a slim strip, so the dex grid starts higher on the screen. */
+.target-row .target { width: 76px; padding: 3px 3px 6px; }
+.target .dex-q { font-size: 1.5rem; }
+.targets .info-head { margin-bottom: 4px; }
+/* Snap dialog footer: the main "Save as …" button gets the room. */
+.dlg-foot .btn-save { flex: 2 1 0; }
+.dlg-foot .btn-ghost { flex: 1 1 0; padding: 0 10px; }

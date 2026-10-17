@@ -202,10 +202,10 @@ function render() {
     <section class="card" aria-labelledby="commTitle">
       ${infoHead('Community', ctx.liveCommunity
         ? 'Connected: posts you share are visible to everyone using this app.'
-        : 'Demo mode: posts you share stay on this device. See README.md to connect a free Supabase project. Sample posts are made-up people with real local species.', { id: 'commTitle' })}
+        : 'Posts you share appear in the Community tab.', { id: 'commTitle' })}
       <label class="switch-row">
         <input type="checkbox" id="samplesToggle"${ctx.showSamples() ? ' checked' : ''}>
-        <span>Show sample posts</span>
+        <span>Show posts from other explorers</span>
       </label>
     </section>
 

@@ -26,6 +26,10 @@ const ENTRIES = [
   [53421, 11, 'deanza', 'rare', 'ai'],
 ];
 const RARITY = { common: 0.2, uncommon: 0.5, rare: 0.75, veryrare: 0.9 };
+// Local record counts that match each rarity score (the same formula as shared.js rarityModel), so the
+// sighting page explains the rating consistently ("Recorded 507 times…").
+const MAX_RECORDS = 2400;
+const recordsFor = rarity => Math.max(1, Math.round(Math.expm1((1 - rarity) * Math.log1p(MAX_RECORDS))));
 
 export function demoSightings(now = Date.now()) {
   return ENTRIES.map(([id, daysAgo, at, tier, idSource], i) => {
@@ -39,7 +43,7 @@ export function demoSightings(now = Date.now()) {
       loc: { lat: place.lat + jitter(1), lng: place.lng + jitter(3), accuracy: 12, source: 'gps', label: place.label },
       taxon: { ...taxon, photo },
       idSource,
-      rating: { baseCount: 0, rarity: RARITY[tier], tier, maxCount: 0, radiusKm: 5, introduced: NON_NATIVE.has(id), ratedAt: new Date(now).toISOString() },
+      rating: { baseCount: recordsFor(RARITY[tier]), rarity: RARITY[tier], tier, maxCount: MAX_RECORDS, radiusKm: 5, introduced: NON_NATIVE.has(id), ratedAt: new Date(now).toISOString() },
       photoRemote: photo,
       demo: true,
     };

@@ -125,14 +125,14 @@ function buildModel(loc, radius, week, obsData, baseline, monthData = null, intr
   // If any part came from the offline fallback, remember the oldest save time to tell the user.
   const staleAt = [week.staleAt, obsData.staleAt, baseline.staleAt].filter(Boolean).sort()[0] || null;
   const inSeason = inSeasonNow(monthData, baseline, new Set(species.map(s => s.id)));
-  // The Collection's "local dex" (151 entries) starts with a Trees section: #001–#050 are the trees most
-  // recorded in this circle (planted ones too, at least twice), then the most-recorded other species fill
-  // the rest. Fewer trees here means more of the others.
+  // The Collection's "local dex": 151 entries in one list, numbered by how often they're recorded in this
+  // circle (#001 = most recorded). Up to 50 of them are trees (planted ones too, recorded at least twice),
+  // so campus trees are collectable alongside the wildlife; the most-recorded other species fill the rest.
   const trees = allTrees.filter(t => t.count >= 2);
   const treeIds = new Set(trees.map(t => t.id));
   const dexTrees = trees.slice(0, DEX_TREES);
   const others = (baseline.top || []).filter(t => !treeIds.has(t.id)).slice(0, DEX_SIZE - dexTrees.length);
-  const dex = [...dexTrees, ...others].map((t, i) => ({
+  const dex = [...dexTrees, ...others].sort((a, b) => b.count - a.count).map((t, i) => ({
     ...t, no: i + 1, tier: rarity.rate(t).tier, introduced: introduced.has(t.id), tree: treeIds.has(t.id),
   }));
   return { loc, radius, weekTotal: week.total, species, obs, inSeason, dex, trees, introduced, counts: baseline, d1: isoDaysAgo(7), staleAt };

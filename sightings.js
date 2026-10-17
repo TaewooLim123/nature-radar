@@ -81,6 +81,7 @@ async function loadAll() {
   try {
     S.items = await sightingsDB.getAll();
     if (!S.items.length) S.items = await seedDemo();
+    else await fixOldDemo(S.items);
   } catch (err) {
     console.error(err);
     S.error = 'This browser isn’t letting Nature Radar save anything. Private browsing modes often block it.';
@@ -103,6 +104,22 @@ async function seedDemo() {
   return items;
 }
 
+// Demo journals saved by an earlier version have no local record counts, so their rarity note
+// read "not recorded here". Fill the counts in from demo-data.js (same ids).
+async function fixOldDemo(items) {
+  const stale = items.filter(s => s.demo && s.rating && !s.rating.baseCount);
+  if (!stale.length) return;
+  const demo = await import('./demo-data.js').catch(() => null);
+  if (!demo) return;
+  const fresh = new Map(demo.demoSightings().map(r => [r.id, r.rating]));
+  for (const s of stale) {
+    const r = fresh.get(s.id);
+    if (!r) continue;
+    s.rating = { ...s.rating, baseCount: r.baseCount, maxCount: r.maxCount };
+    await sightingsDB.put(s);
+  }
+}
+
 function upsert(rec) {
   const i = S.items.findIndex(x => x.id === rec.id);
   if (i >= 0) S.items[i] = rec; else S.items.push(rec);
@@ -112,8 +129,9 @@ const tierOf = s => !s.taxon ? 'needsid' : !s.rating ? 'unrated' : s.rating.tier
 const rows = () => S.items.map(s => ({ s, iconic: s.taxon?.iconic || null, tier: tierOf(s) }));
 
 export function thumbUrl(s) {
-  if (!s.thumb) return s.photoRemote || null; // demo sightings use an iNaturalist photo
-  if (!thumbUrls.has(s.id)) thumbUrls.set(s.id, URL.createObjectURL(s.thumb));
+  const blob = s.thumb || s.photo; // older saves may lack a thumbnail
+  if (!blob) return s.photoRemote || null; // demo sightings use an iNaturalist photo
+  if (!thumbUrls.has(s.id)) thumbUrls.set(s.id, URL.createObjectURL(blob));
   return thumbUrls.get(s.id);
 }
 
@@ -310,7 +328,7 @@ async function handlePhoto(file) {
   }
   // Identify first; shrink the photo for storage at the same time (the AI doesn't need to wait for it).
   const identifying = runAI(d, image);
-  const shrinking = (async () => {
+  const shrinking = d.shrinking = (async () => {
     d.photoBlob = await toJpeg(image, PHOTO_MAX, 0.82);
     d.thumbBlob = await toJpeg(image, THUMB_MAX, 0.75);
     if (draft === d) renderDraftFoot();
@@ -356,7 +374,17 @@ async function runAI(d, image) {
     console.warn('AI failed', err);
     d.ai = { state: 'error', result: null };
   }
-  if (draft === d) renderAiBox();
+  if (draft !== d) return;
+  renderAiBox();
+  // Quick log: a new photo is saved straight away as the AI's top answer (then the "new species"
+  // animation plays). The dialog only stays open when the AI found nothing to name.
+  const top = d.mode === 'new' && d.ai.state === 'done' && d.aiCandidates[0];
+  if (!top) return;
+  await d.shrinking?.catch(() => {}); // the photo must be ready to save
+  if (draft !== d || d.saving) return;
+  d.chosen = pickTaxon(top.taxon);
+  d.idSource = 'ai';
+  saveDraft(true);
 }
 
 // Where the photo was taken: GPS if allowed, otherwise the place you're scanning (marked approximate).
@@ -444,11 +472,12 @@ function chooseCandidate(from, i) {
 
 async function saveDraft(withId) {
   const d = draft;
-  if (!d || d.saving || !d.photoBlob || (withId && !d.chosen)) return;
+  if (!d || d.saving || (!d.photoBlob && d.mode !== 'edit') || (withId && !d.chosen)) return;
   d.saving = true;
   d.saveStep = d.locStatus === 'pending' ? 'Waiting for your location…' : 'Saving…';
   renderDraftFoot();
   await d.locPromise;
+  await d.shrinking?.catch(() => {}); // the small preview may still be in progress
 
   const rec = d.mode === 'edit'
     ? { ...d.sighting }
@@ -594,7 +623,6 @@ function renderAiBox() {
   }
 
   // done
-  const pct = p => `${Math.round(p * 100)}%`;
   if (result.kind === 'pet') {
     box.innerHTML = `<div class="ai-verdict is-warn"><p class="ai-head">🐾 This looks like a pet or farm animal</p>
       <p class="ai-note">Nature Radar is for wild plants and animals. If the AI got it wrong, pick a species below.</p></div>`;
@@ -616,16 +644,16 @@ function renderAiBox() {
   const isPlantPhoto = result.group === 'Plantae' || result.plantish;
   const { model } = ctx.getNearby();
   const trees = isPlantPhoto ? model?.trees || [] : [];
-  const addTrees = g => { for (const m of nearbyMatches(g, trees)) if (m.score >= 2) add(m.s, m.s.id === g.taxon.id ? `${pct(g.rawP ?? g.p)} · tree here` : 'same genus · tree here'); };
+  const addTrees = g => { for (const m of nearbyMatches(g, trees)) if (m.score >= 2) add(m.s, m.s.id === g.taxon.id ? 'tree here' : 'same genus · tree here'); };
   if (top) {
-    for (const m of nearbyMatches(top, d.pool)) add(m.s, m.s.id === top.taxon.id ? `${pct(top.rawP ?? top.p)} · seen nearby` : 'seen nearby');
+    for (const m of nearbyMatches(top, d.pool)) add(m.s, 'seen nearby');
     addTrees(top);
-    add(top.taxon, pct(top.rawP ?? top.p));
+    add(top.taxon, 'best match');
   }
   for (const g of rest) {
     for (const m of nearbyMatches(g, d.pool)) if (m.score >= 2) add(m.s, 'seen nearby');
     addTrees(g);
-    add(g.taxon, pct(g.rawP ?? g.p));
+    add(g.taxon, '');
   }
   const group = GROUPS.find(g => g.key === result.group);
   if (group) {
@@ -637,8 +665,11 @@ function renderAiBox() {
   if (isPlantPhoto && !result.confident) {
     (model?.dex || []).filter(t => t.iconic === 'Plantae').slice(0, 4).forEach(t => add(t, 'common here'));
   }
-  const list = d.aiCandidates.slice(0, isPlantPhoto ? 8 : 6);
+  const list = d.aiCandidates.slice(0, 5); // more than 5 is mostly noise on a phone screen
   d.aiCandidates = list;
+  // A confident answer is picked for you, so saving is one tap ("Save as valley oak"); tap another to change it.
+  const autoPick = d.mode === 'new' && !d.chosen && result.confident && !d.ai.refining && result.kind === 'wildlife' && list[0];
+  if (autoPick) { d.chosen = pickTaxon(list[0].taxon); d.idSource = 'ai'; }
   // For a guess above species level ("Lynxes"), offer to search for the species inside it.
   const searchHint = top && top.taxon.rank !== 'species' && !isOffline()
     ? `<button type="button" class="link-btn ai-search" data-action="s-ai-search" data-q="${esc(top.taxon.name)}">Search species in ${esc(displayName(top.taxon))}</button>` : '';
@@ -652,6 +683,7 @@ function renderAiBox() {
   box.innerHTML = `<div class="ai-verdict${result.kind === 'nature' ? ' is-info' : ''}">${head}
     ${list.length ? `<ul class="cand-list">${list.map((c, i) => candButton(c.taxon, i, 's-choose-ai', c.note)).join('')}</ul>` : ''}
     ${searchHint}</div>`;
+  if (autoPick) { renderCandidates(); renderDraftFoot(); }
 }
 
 // "Search species in Lynxes": fill the search box with the AI's genus/family name.
@@ -694,9 +726,9 @@ function renderDraftFoot() {
     foot.innerHTML = `<p class="progress-note"><span class="spinner" aria-hidden="true"></span><span>${esc(d.saveStep)}</span></p>`;
     return;
   }
-  const ready = !!d.photoBlob;
+  const ready = Boolean(d.photoBlob) || d.mode === 'edit'; // editing keeps the saved photo
   foot.innerHTML = `
-    ${d.mode === 'new' ? `<button type="button" class="btn btn-ghost" data-action="s-save-unknown"${ready ? '' : ' disabled'}>Save without ID</button>` : ''}
+    ${d.mode === 'new' ? `<button type="button" class="btn btn-ghost" data-action="s-save-unknown" title="Save the photo without a name (add one later)"${ready ? '' : ' disabled'}>Skip ID</button>` : ''}
     <button type="button" class="btn btn-save" data-action="s-save"${ready && d.chosen ? '' : ' disabled'}>
       ${d.chosen ? `Save as ${esc(displayName(d.chosen))}${ctx.isNewSpecies(d.chosen.id, d.sighting?.id) ? ' · ✨ New!' : ''}` : 'Pick a match'}
     </button>`;
@@ -717,9 +749,10 @@ export function openDetail(id) {
 function whereLong(s) {
   if (!s.loc) return 'No location saved';
   const { lat, lng, accuracy, source, label } = s.loc;
+  const named = label && label !== 'Your location';
   return source === 'gps'
-    ? `${lat.toFixed(5)}, ${lng.toFixed(5)} (GPS${accuracy ? `, ±${accuracy} m` : ''})`
-    : `Approximate: ${label} (${lat.toFixed(3)}, ${lng.toFixed(3)})`;
+    ? `${named ? label : `${lat.toFixed(4)}, ${lng.toFixed(4)}`} (GPS${accuracy ? ` ±${accuracy} m` : ''})`
+    : `Near ${label} (approximate)`;
 }
 
 const ID_SOURCE = { ai: 'Offline AI', nearby: 'Nearby list', search: 'Name search' };
@@ -812,6 +845,13 @@ function startReidentify() {
   openDraft(d);
   loadSuggestions(d);
   if (s.photo) runAI(d);
+  // Demo sightings only have an online photo: fetch it so the AI can look at it too.
+  else if (s.photoRemote) {
+    // cache: reload, because the copy cached for the <img> tag lacks the CORS header the AI needs.
+    fetch(s.photoRemote, { mode: 'cors', cache: 'reload' }).then(r => (r.ok ? r.blob() : Promise.reject(new Error(r.status))))
+      .then(decodeImage).then(image => { if (draft === d) runAI(d, image); })
+      .catch(err => console.warn('Could not load the photo for the AI', err));
+  }
 }
 
 function showDetailOnMap() {
