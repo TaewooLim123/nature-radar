@@ -1,10 +1,10 @@
 /* Nature Radar — mobile-first styles */
 
 :root {
-  /* One palette for every screen: a light terracotta page (60%), light-sage cards (30%), dark forest green for
+  /* One palette for every screen: a mid-terracotta page (60%), light-sage cards (30%), dark forest green for
      the header, tab bar, dock and primary buttons, and terracotta as the second accent (rarity
      highlights, badges, "NEW" labels). Every text/background pair here passes WCAG AA (4.5:1). */
-  --bg: #f2d4c2;            /* light terracotta page */
+  --bg: #c97a5a;            /* mid-terracotta page: contrasts with the green header and buttons */
   --surface: #e3ecdb;       /* sage cards, dialogs, panels */
   --surface-2: #d5e2ca;     /* hover / nested sage */
   --field: #f8faf4;         /* text inputs: lighter than the cards */
@@ -623,7 +623,7 @@ body[data-view="collection"] .page, body[data-view="mine"] .page, body[data-view
   display: grid; place-content: center; text-align: center;
   background: conic-gradient(var(--accent) calc(var(--pct) * 1%), var(--surface-2) 0);
 }
-.dex-ring::before { content: ""; position: absolute; border-radius: 50%; background: var(--bg); }
+.dex-ring::before { content: ""; position: absolute; border-radius: 50%; background: var(--surface); }
 .dex-ring > * { position: relative; }
 .dex-ring strong { font-family: var(--font-serif); font-size: 1.6rem; line-height: 1; }
 .dex-ring span { font-size: .75rem; color: var(--muted); }
@@ -738,7 +738,7 @@ body[data-view="collection"] .page, body[data-view="mine"] .page, body[data-view
 }
 .entry-shiny { position: absolute; left: 10px; bottom: 10px; padding: 3px 10px; border-radius: 999px; background: var(--sun); color: #3b2a00; font-weight: 800; font-size: .8rem; }
 .entry-stats { margin: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
-.entry-stats div { padding: 8px 10px; border-radius: 12px; background: var(--bg); }
+.entry-stats div { padding: 8px 10px; border-radius: 12px; background: var(--surface-2); }
 .entry-stats dt { font-size: .75rem; color: var(--muted); }
 .entry-stats dd { margin: 2px 0 0; font-weight: 700; }
 .entry-sub { margin: 6px 0 0; font-size: 1rem; }
@@ -906,7 +906,7 @@ body[data-view="collection"] .page, body[data-view="mine"] .page, body[data-view
 .tile strong { display: block; font-family: var(--font-serif); font-size: 1.5rem; line-height: 1.1; }
 .tile span { color: var(--muted); font-size: .75rem; }
 .ach-grid { list-style: none; margin: 4px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
-.ach { display: flex; gap: 12px; padding: 12px; border-radius: 14px; border: 1px solid var(--border); background: var(--bg); }
+.ach { display: flex; gap: 12px; padding: 12px; border-radius: 14px; border: 1px solid var(--border); background: var(--surface-2); }
 .ach-icon { flex: none; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 12px; background: var(--surface-2); font-size: 1.5rem; filter: grayscale(1); opacity: .55; }
 
 .ach.is-done .ach-icon { filter: none; opacity: 1; }
@@ -1029,7 +1029,7 @@ html:has(dialog[open]) body { overflow: hidden; } /* the page behind doesn't scr
   bottom: calc(var(--dock-h) + 28px + env(safe-area-inset-bottom, 0px));
   width: max-content; max-width: min(92vw, 480px);
   padding: 12px 18px; border-radius: 14px;
-  background: var(--text); color: var(--bg); box-shadow: var(--shadow-lg);
+  background: var(--text); color: var(--surface); box-shadow: var(--shadow-lg);
   font-weight: 600; text-align: center;
 }
 
@@ -1141,7 +1141,7 @@ html:has(dialog[open]) body { overflow: hidden; } /* the page behind doesn't scr
 .ach.is-done { border-color: color-mix(in srgb, var(--at) 45%, var(--border)); border-left-color: var(--at); background: color-mix(in srgb, var(--at) 10%, var(--surface)); }
 .ach.is-done .ach-icon { background: color-mix(in srgb, var(--at) 20%, var(--surface)); }
 .ach.at-legendary.is-done { box-shadow: 0 0 0 2px color-mix(in srgb, var(--sun) 70%, transparent); }
-.ach:not(.is-done) { background: var(--bg); }
+.ach:not(.is-done) { background: var(--surface-2); }
 .ach:not(.is-done) strong { color: var(--muted); }
 .ach-tier { display: block; font-family: var(--pixel-font); font-size: .625rem; text-transform: uppercase; letter-spacing: .04em; color: var(--at); }
 .ach-compact { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
@@ -1205,3 +1205,32 @@ html:has(dialog[open]) body { overflow: hidden; } /* the page behind doesn't scr
 /* Snap dialog footer: the main "Save as …" button gets the room. */
 .dlg-foot .btn-save { flex: 2 1 0; }
 .dlg-foot .btn-ghost { flex: 1 1 0; padding: 0 10px; }
+
+/* Text sitting straight on the terracotta page (headings, notes, legend, credits) is a very dark
+   brown for contrast (both pass WCAG AA there); cards and panels keep their own greens. */
+main { --text: #1a120e; --muted: #33201a; --px-ink: #1a120e; color: var(--text); }
+main .sp, main .card, main .post, main .leaderboard, main .dex-head, main .dex-card, main .target, main .season-item,
+main .chip, main .notice, main .tile, main .ach, main .life-row, main .empty, main .state, main .stat-tiles,
+main .life-map-card, main .profile-card { --text: #1c2a20; --muted: #4c5a4e; }
+main .credits a { color: var(--text); }
+@media (prefers-color-scheme: dark) {
+  main, main .sp, main .card, main .post, main .leaderboard, main .dex-head, main .dex-card, main .target, main .season-item,
+  main .chip, main .notice, main .tile, main .ach, main .life-row, main .empty, main .state, main .stat-tiles,
+  main .life-map-card, main .profile-card { --text: #e9efe4; --muted: #a7b5a6; --px-ink: #e9efe4; }
+  main .credits a { color: var(--accent); }
+}
+
+/* Community: "Explorers" strip, every person one tap from their profile. */
+.explorers { margin: 0 0 14px; min-width: 0; } /* min-width: 0 keeps the strip scrolling inside the feed grid */
+.explorers h2 { margin: 0 0 8px; font-family: var(--font-serif); font-size: 1.15rem; }
+.explorer-row { list-style: none; margin: 0 -16px; padding: 0 16px 4px; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+.explorer-row::-webkit-scrollbar { display: none; }
+.explorer {
+  --text: #1c2a20; --muted: #4c5a4e;
+  width: 84px; display: grid; justify-items: center; gap: 2px; padding: 8px 4px; cursor: pointer;
+  border: 1px solid var(--border); border-radius: var(--r); background: var(--surface); color: var(--text); box-shadow: var(--shadow);
+}
+.explorer .avatar { width: 44px; height: 44px; font-size: 1.4rem; }
+.explorer-name { max-width: 100%; font-size: .75rem; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.explorer-meta { font-size: .6875rem; color: var(--muted); }
+@media (prefers-color-scheme: dark) { .explorer { --text: #e9efe4; --muted: #a7b5a6; } }

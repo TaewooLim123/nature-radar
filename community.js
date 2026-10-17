@@ -18,7 +18,7 @@ const KEY = COMMUNITY.supabaseAnonKey || '';
 const BUCKET = 'sightings';
 const COLUMNS = 'id,created_at,author_name,author_avatar,author_color,taxon_id,taxon_name,common_name,iconic,tier,rarity,place,lat,lng,caption,photo_path,likes';
 const LIKED_KEY = 'nr-liked';
-const SAMPLES_KEY = 'nr-show-samples';
+const SAMPLES_KEY = 'nr-show-explorers';
 
 let ctx = null; // from app.js: getSightings, thumbUrl, showOnMap, showTab, onChange
 const C = {
@@ -202,7 +202,19 @@ function render() {
     return;
   }
   el.status.innerHTML = '';
-  el.feed.innerHTML = (showSamples() ? topExplorers() : '') + shown.map(postCard).join('');
+  el.feed.innerHTML = (showSamples() ? explorersStrip() + topExplorers() : '') + shown.map(postCard).join('');
+}
+
+// "Explorers": everyone in the community, one tap from their profile (collection + achievements).
+function explorersStrip() {
+  const people = Object.values(SAMPLE_USERS).sort((a, b) => b.level - a.level || b.dex.length - a.dex.length);
+  return `<section class="explorers" aria-labelledby="explorersTitle">
+    <h2 id="explorersTitle">Explorers</h2>
+    <ul class="explorer-row">${people.map(u => `<li><button type="button" class="explorer" data-action="c-profile" data-user="${esc(u.key)}" aria-label="See ${esc(u.name)}’s profile">
+      <span class="avatar" style="--av:${esc(u.color)}" aria-hidden="true">${esc(u.avatar)}</span>
+      <span class="explorer-name">${esc(u.name)}</span><span class="explorer-meta">Lv ${u.level} · ${u.dex.length} sp.</span>
+    </button></li>`).join('')}</ul>
+  </section>`;
 }
 
 // "Top explorers this week": sample people ranked by posts and likes in the last 7 days.
