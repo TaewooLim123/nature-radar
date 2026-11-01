@@ -153,6 +153,9 @@ function render() {
   el.tabCount.textContent = S.items.length || '';
   ctx.onChange();
 
+  const demoBanner = document.getElementById('demoBanner');
+  if (demoBanner) demoBanner.hidden = !S.items.some(s => s.demo);
+
   if (!S.loaded) {
     el.status.innerHTML = '';
     el.list.innerHTML = skeletonRows(3);
