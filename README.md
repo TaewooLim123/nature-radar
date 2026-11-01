@@ -1,68 +1,36 @@
 # Nature Radar
 
-A mobile-first web app for spotting wildlife:
+**1st place, DAHacks 5.0 (De Anza College, October 2026)** · built solo
 
-- **Nearby:** see which plants and animals people logged near you **this week**, ranked by how rare they are **in that exact area**.
-- **Nearby** also shows what’s **in season this month**, species that turn up here far more often now than usual.
-- **Snap a photo** (camera button, bottom right). An **AI that runs on your phone, with no internet needed,** identifies about 4,000 birds, plants and insects to species, or tells you the photo has no wildlife in it. Turn any sighting into a share card for Instagram. Your sightings are saved with time, place and local rarity.
-- **Community:** share sightings to a feed and like other people's posts.
-- **Account** (tap your avatar): profile, stats, 29 achievements with rarity tiers ("Oak collector", "Forest keeper", "7-day streak", …) and backups.
-- **Collection:** a pixel-art, Pokédex-style page. Its 151 entries start with the 50 trees most recorded near you (#001–#050), then the most-recorded wildlife and plants, with a "NEW SPECIES!" animation every time you photograph something for the first time.
+**Live app:** https://taewoolim123.github.io/nature-radar/ (best on a phone; it installs like an app and works offline)
 
-It's plain HTML, CSS and JavaScript with no build step and no API keys. It works on any static web host, including **GitHub Pages**, and keeps working offline.
+**Demo video:** https://www.youtube.com/watch?v=HuQe_GywwqE · **Devpost:** https://devpost.com/software/nature-radar
 
----
+<p>
+<img src="https://d112y698adiu2z.cloudfront.net/photos/production/software_photos/005/601/866/datas/gallery.jpg" width="30%" alt="Nature Radar screenshot">
+<img src="https://d112y698adiu2z.cloudfront.net/photos/production/software_photos/005/601/867/datas/gallery.jpg" width="30%" alt="Nature Radar screenshot">
+<img src="https://d112y698adiu2z.cloudfront.net/photos/production/software_photos/005/601/868/datas/gallery.jpg" width="30%" alt="Nature Radar screenshot">
+</p>
 
-## Put it on GitHub Pages (to test on your phone)
+Nature Radar shows which plants and animals people have spotted near you this week, ranked by how rare they are in that exact area. Photograph one and AI running on your phone, with no internet, names the species. Every new species goes into a Pokédex-style collection.
 
-You'll end up with a link like `https://YOUR-NAME.github.io/nature-radar/` that opens the app on any phone.
+## What it does
 
-> **Why not just open the GitHub repo link?** `github.com/you/nature-radar` shows the *code*. GitHub **Pages** turns that code into a working website at `you.github.io/nature-radar`. Phones also only allow the camera, GPS and offline mode on `https://` sites, and GitHub Pages provides that.
+- **Nearby this week:** a map and ranked list of species logged within 1, 3 or 5 km in the last 7 days, scored by a local rarity model on iNaturalist data. It also flags species that are in season this month and species that are non-native.
+- **Offline species ID:** four models run in the browser. A general MobileNet model decides whether a photo shows wildlife at all; three species classifiers trained on iNaturalist photos then name about 960 birds, 2,100 plants and 1,000 insects. Results are weighted toward species recorded nearby.
+- **Collection:** a 151-entry local dex (the 50 trees most recorded nearby come first), a life list, XP levels and 29 achievements.
+- **Community:** a shared sighting feed with likes, backed by Supabase (runs in demo mode until configured).
+- **Works offline:** a service worker caches the app, the models and viewed map tiles; network requests retry with backoff and fall back to the last saved data.
 
-### 1. Make a GitHub account
-Go to <https://github.com/signup> and sign up (free). Verify your email.
+## Technical highlights
 
-### 2. Create a repository
-1. Click the **+** (top right) → **New repository**.
-2. **Repository name:** `nature-radar`. Lowercase with no spaces is easiest; this name becomes part of your link.
-3. Choose **Public**. GitHub Pages is free only for public repos.
-4. Leave everything else as is and click **Create repository**.
+- **Rarity score:** `rarity = 1 − log(1 + localCount) / log(1 + max)` over each area's all-time iNaturalist records, so "very rare" stays meaningful on a heavily skewed distribution. Details below.
+- **Model cascade:** the general model gates the species models, so a coffee cup is never called a bird, and only the model for the detected group runs. About 0.2 s per photo on a laptop. Accuracy on held-out iNaturalist photos is in the table below.
+- **No build step, no API keys:** plain HTML, CSS and JavaScript (ES modules), TensorFlow.js and TensorFlow Lite for the web, deployable to any static host.
+- **Respectful API use:** requests are serialized at about 1 per second with timeouts, retries and caching, per iNaturalist's API guidelines.
+- **Privacy:** sightings and photos stay on the device (IndexedDB); shared posts round location to about 1 km.
 
-### 3. Upload the files
-1. On the new repo's page, click **uploading an existing file** (or **Add file → Upload files**).
-2. On your computer, open the `Nature Radar` folder. Select **everything inside it**: the files *and* the `icons`, `models`, `supabase` and `vendor` folders. Drag them all onto the GitHub page.
-   - Drag the *contents*, not the `Nature Radar` folder itself, so `index.html` ends up at the top level of the repo.
-   - Chrome, Edge or Safari keep the folder structure when you drag folders.
-   - That’s 40 files (about 40 MB). GitHub's limit is 100 files per upload, so it fits in one go. Wait until every file shows in the list.
-3. Scroll down and click **Commit changes**.
-4. Check that the repo's main page shows `index.html`, `app.js`, … and the folders `icons/`, `models/`, `vendor/`.
-
-### 4. Turn on GitHub Pages
-1. In the repo, click **Settings** (top tab) → **Pages** (left menu).
-2. Under **Build and deployment → Source**, pick **Deploy from a branch**.
-3. Under **Branch**, pick **main** and **/ (root)**, then click **Save**.
-4. Wait 1–2 minutes and refresh the page. A box appears: **"Your site is live at https://YOUR-NAME.github.io/nature-radar/"**.
-   (You can watch progress in the repo's **Actions** tab; a green check ✓ means it's done.)
-
-### 5. Open it on your phone
-1. Open that link on your phone (text or email it to yourself, or type it in).
-2. Allow **location** when asked, then try **Snap**. The first photo downloads the AI (about 37 MB, once; use Wi-Fi if you can).
-3. **Install it like an app:**
-   - iPhone (Safari): **Share** button → **Add to Home Screen**.
-   - Android (Chrome): **⋮** menu → **Add to Home screen** / **Install app**.
-4. Try offline: switch on airplane mode and open the app from your home screen. Your sightings, saved Nearby data, the map areas you've viewed and the AI all still work.
-
-### Updating the app later
-Edit or replace a file in the repo (**Add file → Upload files** with the new version, then **Commit changes**). GitHub Pages republishes in about a minute. The app loads the newest files whenever the phone is online.
-
-### If something goes wrong
-| Problem | Fix |
-|---|---|
-| The link shows **404** | Wait 2 minutes. Check that `index.html` is at the top level of the repo (not inside a `Nature Radar/` folder) and that Pages is set to `main` / `(root)`. |
-| The page is blank, or **"Almost there!"** | You opened the file directly from your computer. Use the GitHub Pages link instead. |
-| Map works but **"Use my location"** fails | Allow location for the site in your phone's browser settings, or use **De Anza College** / **Pick a spot**. |
-| AI says "isn't available" | The first time, the phone must be online to download it. Check that the `models/mobilenet` folder (`model.json` + `weights.bin`) was uploaded. |
-| Camera doesn't open | Some in-app browsers (inside Instagram, Gmail, etc.) block it. Open the link in Safari or Chrome. |
+Built with Claude Code as an AI pair programmer.
 
 ---
 
